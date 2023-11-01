@@ -5,6 +5,7 @@ import java.util.*;
 class Save {
 	File stream;
 	boolean newGame;
+
 	
 	Save(){
 		this.newGame = true;
@@ -45,6 +46,7 @@ abstract class Pokemon {
 class Player {
 	String nick;
 	String sex;
+	String pronome;
 	int insigneas;
 	ArrayList<Pokemon> myPokemons = new ArrayList<Pokemon>();
 	
@@ -52,6 +54,7 @@ class Player {
 		this.nick = nick;
 		this.sex = sex;
 		this.insigneas = insigneas;
+		this.pronome = sex.equals("menino") ? "o" : "a"; 
 	}
 	
 	public String getNick() {
