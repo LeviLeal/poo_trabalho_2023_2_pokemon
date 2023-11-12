@@ -1,6 +1,33 @@
 package poo_trabalho_pokemon;
 import java.io.File;
 import java.util.*;
+class Save {
+	private File stream;
+	private boolean newGame;
+	Save(){
+		this.newGame = true;
+		try {
+			stream = new File("./config/");
+			stream.mkdir();
+			stream = new File("./config/config.txt");
+			stream.createNewFile();
+		} catch (Exception e) {
+			System.out.println("Erro ao criar diretorio ou arquivo" + e.getMessage());
+		}
+	}
+	
+	public void saveConfig () {
+		
+	}
+	
+	public String readConfig () {
+		return "";
+	}
+	
+	public boolean isNewGame() {
+		return newGame;
+	}
+}
 
 enum Type {
 	ELETRIC, GRASS, WATER, FIRE, FIGHTING, GHOST, NORMAL, PSYCHIC, SPECIAL;
@@ -35,39 +62,10 @@ enum Type {
 	}
 }
 
-class SpecialAttack extends Attack {
-	
-}
-
-
-class Save {
-	File stream;
-	boolean newGame;
-	Save(){
-		this.newGame = true;
-		try {
-			stream = new File("./config/");
-			stream.mkdir();
-			stream = new File("./config/config.txt");
-			stream.createNewFile();
-		} catch (Exception e) {
-			System.out.println("Erro ao criar diretorio ou arquivo" + e.getMessage());
-		}
-	}
-	
-	public void saveConfig () {
-		
-	}
-	
-	public String readConfig () {
-		return "";
-	}
-}
-
 class Attack {
-	Type type;
-	String name;
-	int damage;
+	private Type type;
+	private String name;
+	private int damage;
 	Attack(String name, Type type, int damage){
 		this.type = type;
 		this.name = name;
@@ -75,24 +73,111 @@ class Attack {
 	}
 }
 
+interface Item {
+	public void use();
+}
+
+class Consumable implements Item {
+	private String itemName;
+	private Pokemon pokemon;
+	Consumable (String itemName, Pokemon pokemon) {
+		this.itemName = itemName;
+		this.pokemon = pokemon;
+	}
+	public void use() {
+		switch(itemName) {
+			case "Potion":
+				Potion();
+				break;
+			case "Protein":
+				Protein();
+				break;
+			case "Candy":
+				Candy();
+				break;
+		}
+	}
+	public void Potion () {
+		pokemon.setHP(0);
+	}
+	public void Protein() {
+		pokemon.getAtkFactor();
+	}
+	public void Candy() {
+		pokemon.levelUP();
+	}
+}
+
+class PokeBall implements Item {
+	private Pokemon target;
+	
+	PokeBall(Pokemon target) {
+		this.target = target;
+		target.setHP(target.getHP() / 2 - 1);
+	}
+	public void use() {
+		if(target.getHP() < target.getMaxHP() / 2) {
+			catchTarget();
+		} else {
+			Main.msg("A Pokebola falhou! Parece que ainda esta disposto a lutar...");
+		}
+	}
+	public void catchTarget() {
+		Random random = new Random();
+        double chance = random.nextDouble();
+		if (chance < 0.5) {
+			Main.msg("A Pokebola falhou! Parece que ainda esta disposto a lutar...");
+		} else {
+			Main.msg("Parabéns, você capturou um " + target.getName());
+		}
+	}
+}
+
 class Pokemon {
-	String name;
-	String type;
-	int level;
-	int hp;
+	private String name;
+	private String type;
+	private int level;
+	private int hp;
+	private int maxHP;
+	private int atkFactor;
 	
 	Pokemon(String name, String type, int level, int hp, Attack atk1, Attack atk2, Attack atk3, Attack atk4) {
 		this.name = name;
 		this.type = type;
 		this.level = level;
 		this.hp = hp;
+		this.maxHP = hp;
+		this.atkFactor = 0;
+	}
+	
+	public void setHP(int hp) {
+		this.hp = hp > maxHP ? maxHP : hp;  
+	}
+	public int getHP() {
+		return this.hp;
+	}
+	public int getMaxHP() {
+		return this.maxHP;
+	}
+	public int getAtkFactor() {
+		return this.atkFactor;
+	}
+	public void setAtkFactor(int atkFactor) {
+		this.atkFactor = atkFactor;
+	}
+	public void levelUP() {
+		this.atkFactor += 1;
+		maxHP += 1;
+	}
+	public String getName() {
+		return this.name;
 	}
 }
 
 class Player {
-	String nick;
-	String sex;
-	String pronome;
+	private String nick;
+	private String sex;
+	private String pronome;
 	int insigneas;
 	ArrayList<Pokemon> myPokemons = new ArrayList<Pokemon>();
 	
@@ -121,9 +206,9 @@ class Player {
 // se ja tiver tudo feito, então pega os valores do config na main
 
 class Game {
-	ArrayList <Pokemon> pokemon;
-	Player player;
-	Boolean inBattle;
+	private ArrayList <Pokemon> pokemon;
+	private Player player;
+	private Boolean inBattle;
 	Game (String playerSex, String playerNick, int insigneas) {
 		this.player = new Player(playerNick, playerSex, insigneas);
 		pokemon = new ArrayList<>();
@@ -179,17 +264,18 @@ class Game {
 
 public class Main {
 	public static void main (String[]args) {
-		Boolean debug = false;
 		Save save = new Save();	
 		Game game = null;
 		
-		if(debug) {
-			Type type = Type.BUG;
-			msg(type.getWeakness());
+		// DEBUG!
+		if(true) {
+			PokeBall pkb = new PokeBall(new Pokemon("Charmander", "FOGO", 39, 1, new Attack("Scratch", Type.NORMAL, 40), 
+				new Attack("Ember", Type.FIRE, 40), new Attack("Slash", Type.NORMAL, 70), new Attack("Fire Spin", Type.FIRE, 35)));
+			pkb.use();
 			return;
 		}
 		
-		if(save.newGame) {
+		if(save.isNewGame()) {
 			msg("Bem vindo ao mundo de pokemon!\nPessoas referem-se a mim "
 					+ "afetuosamente como Professor Pokémon. Esse mundo é hábitado vastamento por\n "
 					+ "criaturas chamadas Pokemon. Para algumas pessoas pokemons são pets. Para"
