@@ -101,7 +101,7 @@ class Consumable implements Item {
 		pokemon.setHP(0);
 	}
 	public void Protein() {
-		pokemon.getAtkFactor();
+		pokemon.setAtkFactor(pokemon.getAtkFactor() + 1);
 	}
 	public void Candy() {
 		pokemon.levelUP();
@@ -109,20 +109,15 @@ class Consumable implements Item {
 }
 
 class PokeBall implements Item {
-	private Pokemon target;
-	
-	PokeBall(Pokemon target) {
-		this.target = target;
+	public void use(Pokemon target) {
 		target.setHP(target.getHP() / 2 - 1);
-	}
-	public void use() {
 		if(target.getHP() < target.getMaxHP() / 2) {
-			catchTarget();
+			catchTarget(target);
 		} else {
 			Main.msg("A Pokebola falhou! Parece que ainda esta disposto a lutar...");
 		}
 	}
-	public void catchTarget() {
+	public void catchTarget(Pokemon target) {
 		Random random = new Random();
         double chance = random.nextDouble();
 		if (chance < 0.5) {
@@ -140,6 +135,7 @@ class Pokemon {
 	private int hp;
 	private int maxHP;
 	private int atkFactor;
+	private ArrayList<Attack> attacks;
 	
 	Pokemon(String name, String type, int level, int hp, Attack atk1, Attack atk2, Attack atk3, Attack atk4) {
 		this.name = name;
@@ -148,8 +144,17 @@ class Pokemon {
 		this.hp = hp;
 		this.maxHP = hp;
 		this.atkFactor = 0;
+		this.attacks = new ArrayList<>();
+		this.attacks.add(atk1);
+		this.attacks.add(atk2);
+		this.attacks.add(atk3);
+		this.attacks.add(atk4);
 	}
 	
+	public Attack () {
+		return
+	}
+
 	public void setHP(int hp) {
 		this.hp = hp > maxHP ? maxHP : hp;  
 	}
@@ -174,10 +179,42 @@ class Pokemon {
 	}
 }
 
+class Battle {
+	Pokemon myPokemon;
+	Pokemon opponent;
+	String winner;
+	String loser;
+	Battle(Pokemon myPokemon, Pokemon opponent){
+		this.myPokemon = myPokemon;
+		this.opponent = opponent;
+		this.winner = "undefined";
+	}
+	public void nextRound(){
+		if (!winner.equals("undefined"))
+			endBattle();
+		else{
+			Main.msg(myPokemon.getName() " usou ");
+			Main.msg(opponent.getName() " sofreu " + "de dano")
+			if(opponent.getHP() <= 0)
+				endBattle();
+			Main.msg(opponent.getName() " usou ");
+			Main.msg(myPokemon.getName() " sofreu " + "de dano")
+			if(myPokemon.getHP() <= 0)
+				endBattle();
+		}
+	}
+
+	private void endBattle(){
+		Main.msg(getLoser() + " foi derrotado, " + getWinner() + " é o vencedor!");
+	}
+
+	private void getLoser(){return loser};
+	private void getWinner(){return winner};
+}
+
 class Player {
 	private String nick;
 	private String sex;
-	private String pronome;
 	int insigneas;
 	ArrayList<Pokemon> myPokemons = new ArrayList<Pokemon>();
 	
@@ -185,7 +222,6 @@ class Player {
 		this.nick = nick;
 		this.sex = sex;
 		this.insigneas = insigneas;
-		this.pronome = sex.equals("menino") ? "o" : "a"; 
 	}
 	
 	public String getNick() {
@@ -206,22 +242,22 @@ class Player {
 // se ja tiver tudo feito, então pega os valores do config na main
 
 class Game {
-	private ArrayList <Pokemon> pokemon;
+	private ArrayList <Pokemon> pokemons;
+	private ArrayList <Item> items;
 	private Player player;
-	private Boolean inBattle;
+	private Boolean status;
 	Game (String playerSex, String playerNick, int insigneas) {
 		this.player = new Player(playerNick, playerSex, insigneas);
-		pokemon = new ArrayList<>();
-		/*String name, String type, int level, int hp, Attack atk1, Attack atk2, Attack atk3, Attack atk4*/
-		// String type, String name, int damage
+		this.pokemons = new ArrayList<>();
+		this.items = new ArrayList<>();
 		
-		this.pokemon.add(new Pokemon("Charmander", "FOGO", 39, 1, new Attack("Scratch", Type.NORMAL, 40), 
+		this.pokemons.add(new Pokemon("Charmander", "FOGO", 39, 1, new Attack("Scratch", Type.NORMAL, 40), 
 				new Attack("Ember", Type.FIRE, 40), new Attack("Slash", Type.NORMAL, 70), new Attack("Fire Spin", Type.FIRE, 35)));
-		this.pokemon.add(new Pokemon("Bulbassauro", "GRAMA", 45, 1, new Attack("Trackle", Type.NORMAL, 40), 
+		this.pokemons.add(new Pokemon("Bulbassauro", "GRAMA", 45, 1, new Attack("Trackle", Type.NORMAL, 40), 
 				new Attack("Vine Whip", Type.GRASS, 45), new Attack("Razor Leaf", Type.GRASS, 55), new Attack("Take Down", Type.NORMAL, 90)));
-		this.pokemon.add(new Pokemon("Squirtle", "AGUA", 45, 1, new Attack("Tackle", Type.NORMAL, 40), 
+		this.pokemons.add(new Pokemon("Squirtle", "AGUA", 45, 1, new Attack("Tackle", Type.NORMAL, 40), 
 				new Attack("Water Gun", Type.WATER, 40), new Attack("Rapid Spin", Type.NORMAL, 50), new Attack("Water Pulse", Type.WATER, 60)));
-		this.pokemon.add(new Pokemon("Pikachu", "ELETRICO", 35, 1, new Attack("Quick Attacak", Type.NORMAL, 40), 
+		this.pokemons.add(new Pokemon("Pikachu", "ELETRICO", 35, 1, new Attack("Quick Attacak", Type.NORMAL, 40), 
 				new Attack("Thunder Shock", Type.ELETRIC, 40), new Attack("Discharge", Type.ELETRIC, 80), new Attack("Iron Tail", Type.NORMAL, 100)));
 
 	}
@@ -238,28 +274,32 @@ class Game {
 				+ "\n====================="
 				+ "\n O que vai escolher?");
 	}
-	public void playerChoose(String choose) {
-		if (inBattle()) {
-			switch(choose) {
-				case "Fight":
-					break;
-				case "Fugir":
-					break;
-				default:
-					Main.msg("Opção escolhida não existe");
-			}
-		} else {
-			switch(choose) {
-				case "Fight":
-					break;
-				case "Fugir":
-					break;
-				default:
-					Main.msg("Opção escolhida não existe");
-			}
-		}
+	
+	public void shopMenu () {
+		Main.msg("==================\n"
+		+ "|Loja|\n" 
+		+ "Pokebola | 50C");
 	}
-	public boolean inBattle () { return this.inBattle; }
+
+	public void addItem (String itemType) {
+		Item newItem;
+		switch(itemType) {
+			case "Pokebola":
+				newItem = new PokeBall();
+		}
+		
+	}
+
+	public void removeItem(int index){
+		this.items.remove(index);
+	}
+
+	public ArrayList<Item> getItems(){
+		return this.items;
+	}
+
+	public boolean getStatus () { return this.status; }
+	public void setStatus (String status) { this.status = status; }
 }
 
 public class Main {
@@ -268,31 +308,66 @@ public class Main {
 		Game game = null;
 		
 		// DEBUG!
-		if(true) {
-			PokeBall pkb = new PokeBall(new Pokemon("Charmander", "FOGO", 39, 1, new Attack("Scratch", Type.NORMAL, 40), 
-				new Attack("Ember", Type.FIRE, 40), new Attack("Slash", Type.NORMAL, 70), new Attack("Fire Spin", Type.FIRE, 35)));
-			pkb.use();
-			return;
-		}
+		// if(true) {
+		// 	PokeBall pkb = new PokeBall(new Pokemon("Charmander", "FOGO", 39, 1, new Attack("Scratch", Type.NORMAL, 40), 
+		// 		new Attack("Ember", Type.FIRE, 40), new Attack("Slash", Type.NORMAL, 70), new Attack("Fire Spin", Type.FIRE, 35)));
+		// 	pkb.use();
+		// 	return;
+		// }
 		
 		if(save.isNewGame()) {
-			msg("Bem vindo ao mundo de pokemon!\nPessoas referem-se a mim "
-					+ "afetuosamente como Professor Pokémon. Esse mundo é hábitado vastamento por\n "
+			msg("Bem vindo ao mundo de pokemon!\nEsse mundo é hábitado por\n "
 					+ "criaturas chamadas Pokemon. Para algumas pessoas pokemons são pets. Para"
-					+ "outras, são para batalhas. \nMas primeiro, conte-me um pouco sobre você."
-					+ "\nAgora me conte, você é um menino, ou uma menina?");
+					+ "outras, são para batalhas. \nMas primeiro, conte-me qual seu nome");
 			String firstAnswer = nextLine();
-			msg("Agora o seu nome. Me diga qual é?");
+			msg("Escolha seu Pokemon. Ha quatro opcoes! Digite:\nC para Charmander\nS para Squirtle\nB para Bulbassauro\nP para Pikachu!");
 			String secondAnswer = nextLine();
 			game = new Game(firstAnswer, secondAnswer, 0);
-			msg("Um mundo de sonhos e aventuras pokemons lhe aguardam! Vamos lá!\n...............................");
-			msg(game.getPlayerNick() + " foi teleportado para sua cidade, é hora de começar sua jornada!");
+			msg("\n" + game.getPlayerNick() + " foi teleportado para sua cidade, é hora de começar sua jornada!");
 		} else 
-			msg("Que bom te ver de novo!");
+			msg("Bem-vindo de volta!");
 		while (true) {
-			game.menu();
-			String choose = nextLine();
-			game.playerChoose(choose);
+
+			switch (game.getStatus()) {
+				case "battle"
+					game.battleMenu();
+					break;
+				case "shop":
+					game.shopMenu();
+					break;
+				default:
+					game.menu();
+			}
+
+
+			String nextLine = nextLine();
+			msg("> | ");
+			String [] splitedLine = nextLine.split("")
+			// Coloquei o primeiro em uma variavel pois eh muito usado
+			String firstArg = splitedLine[0];
+			
+			if(!game.inBattle()) {
+
+			}
+
+			switch (game.getStatus()) {
+				case "battle"
+					switch(){
+						case " ":
+						default:
+							msg("Opção escolhida não existe");
+					}
+					break;
+				case "shop":
+					game.shopMenu();
+					break;
+				default:
+					game.menu();
+			}
+
+			// game.menu();
+			// String choose = nextLine();
+			// game.playerChoose(choose);
 		}
 	}
 	private static Scanner scanner = new Scanner(System.in);
