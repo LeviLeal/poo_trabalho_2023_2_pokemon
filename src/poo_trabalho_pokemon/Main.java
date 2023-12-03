@@ -1,21 +1,6 @@
 package poo_trabalho_pokemon;
-import java.io.File;
 import java.util.*;
 class Save {
-	private File stream;
-	private boolean newGame;
-	Save(){
-		this.newGame = false;
-		try {
-			stream = new File("./config/");
-			stream.mkdir();
-			stream = new File("./config/config.txt");
-			stream.createNewFile();
-		} catch (Exception e) {
-			System.out.println("Erro ao criar diretorio ou arquivo" + e.getMessage());
-		}
-	}
-	
 	public Game getGame () {
 		String playerName = "Levi";
 		String choosedPokemon = "C";	
@@ -23,18 +8,6 @@ class Save {
 		Game game = new Game(playerName, choosedPokemon, insigneas);
 		game.getPlayer().deposit(1000);
 		return game;
-	}
-
-	public void saveGame () {
-		
-	}
-		
-	public boolean isNewGame() {
-		Game savedGame = getGame();
-		if(savedGame != null)
-			return false;
-		else
-			return true;
 	}
 }
 
@@ -87,19 +60,19 @@ class Item {
 	protected String itemName;
 	protected Pokemon target;
 	protected int price;
+	Item (String itemName) {
+		this.itemName = itemName;
+	}
+
 	protected void setTarget(Pokemon target) { this.target = target;	};
 	protected Pokemon getTarget() { return this.target; } 
 	public int getPrice() { return this.price; }
+	public void setPrice(int price) { this.price = price; }
 	public String getName() { return this.itemName; }
 	public boolean getIdleUse() { return this.idleUse; }
 	public void setIdleUse(boolean idleUse) { this.idleUse = idleUse; }
 	public String toString () {
 		return "1x " + getName(); 
-	}
-
-	Item (String itemName) {
-		this.itemName = itemName;
-		this.idleUse = true;
 	}
 }
 
@@ -108,6 +81,7 @@ class Consumable extends Item implements IUsable {
 		super(itemName);
 		this.target = target;
 		this.price = 50;
+		setIdleUse(false);
 	}
 	public void use(Pokemon target) {
 		this.target = target;
@@ -115,14 +89,17 @@ class Consumable extends Item implements IUsable {
 			case "Potion":
 				Potion();
 				setIdleUse(false);
+				setPrice(50);
 				break;
 			case "Protein":
 				Protein();
 				setIdleUse(true);
+				setPrice(100);
 				break;
 			case "Candy":
 				setIdleUse(true);
 				Candy();
+				setPrice(500);
 				break;
 		}
 	}
@@ -144,6 +121,7 @@ class PokeBall extends Item implements IUsable {
 	PokeBall (String itemName){
 		super(itemName);
 		setIdleUse(false);
+		setPrice(200);
 	}
 	public void use(Pokemon target) {
 		target.setHP(target.getHP() / 2 - 1);
@@ -238,18 +216,18 @@ class Battle {
 			getOpponent().setHP(getOpponent().getHP() - damage);
 			if(opponent.getHP() <= 0) {
 				setWinner(myPokemon.getName());
-				setLoser(opponent.getName());
+				setLoser(opponent.getName()+ " selvagem");
 				Main.msg("Parabens!");
 				endBattle();
 				return;
 			}
 			// ATAQUE SELVAGEM
-			Main.msg(opponent.getName() + " usou " + opponentAttack.getAttackName());
+			Main.msg(opponent.getName() + " selvagem usou " + opponentAttack.getAttackName());
 			damage = damage(opponentAttack, myPokemon, opponent.getAtkFactor());
 			Main.msg(myPokemon.getName() + " sofreu " + damage + " de dano");
 			getMyPokemon().setHP(getMyPokemon().getHP() - damage);
 			if(myPokemon.getHP() <= 0) {
-				setWinner(opponent.getName());
+				setWinner(opponent.getName() + " selvagem");
 				setLoser(myPokemon.getName());
 				Main.msg("Precisa treinar mais...");
 				endBattle();
@@ -307,6 +285,7 @@ class Player {
 	public void addPokemon(Pokemon pokemon) { this.myPokemons.put(pokemon.getName(), pokemon);}
 	public String getNick() { return this.nick; } 
 	public int getInsigneas() { return this.insigneas; }
+	public void upInsignea() { this.insigneas += 1; }
 	public int getMoney() { return this.money; }
 	public void withdraw(int money) { this.money -= money; }
 	public void deposit (int money) { this.money += money; }
@@ -319,7 +298,12 @@ class Player {
 	}
 	public void removeItem(int index){ this.items.remove(index); }
 	public ArrayList<Item> getItems(){ return this.items; }
-	public Item getItem(int index){ return this.items.get(index); }
+	public Item getItem(int index){ 
+		if (this.items.size() < index)
+			return null;
+		else
+			return this.items.get(index - 1);
+	}
 	public void addItem(Item item) { this.items.add(item); }
 	public void setCurrentPokemon (Pokemon pokemon) { this.currentPokemon = pokemon; }
 	public Pokemon getCurrentPokemon () { return this.currentPokemon; }
@@ -345,8 +329,10 @@ class Game{
 	private Player player;
 	private String status; 
 	public Battle battle;
+	private String previousMenu;
 
 	Game (String playerNick, String choosedPokemon, int insigneas) {
+		setPreviousMenu("idle");
 		setStatus("idle");
 		this.player = new Player(playerNick, choosedPokemon, insigneas);
 		this.pokemons = new HashMap<>();
@@ -390,6 +376,7 @@ class Game{
 		Main.msg("Fim da batalha");
 		player.getCurrentPokemon().levelUP();
 		player.deposit(50);
+		player.upInsignea();
 
 		setStatus("idle");
 		menu();
@@ -397,7 +384,6 @@ class Game{
 
 
 	public void battleMenu () {
-
 		Main.msg("=====================\n"
 				+ "| (A) Atacar | (B) Bag | (F) Fugir... |"
 				+ "\n====================="
@@ -422,7 +408,7 @@ class Game{
 		}
 
 		Main.msg("Cuidado, um " + opponent.getName() + " selvagem apareceu!");
-		opponent.setName(opponent.getName() + " selvagem");
+		opponent.setName(opponent.getName());
 		this.battle = new Battle(player.getCurrentPokemon(), opponent);
 		setStatus("Battle");
 	}
@@ -435,23 +421,23 @@ class Game{
 	public void shopMenu () {
 		Main.msg("==================\n"
 		+ "|Loja| Seu dinheiro: " + player.getMoney() + "\n" 
-		+ "(1) Pokebola | 50C\n"
+		+ "(1) Pokebola | 200C\n"
 		+ "(2) Potion   | 50C\n"
-		+ "(3) Protein  | 70C\n"
-		+ "(4) Candy    | 50C\n"
+		+ "(3) Protein  | 100C\n"
+		+ "(4) Candy    | 500C\n"
 		+ "|(V)oltar|");
 	}
 
 	public void bagMenu () {
 		int i = 1;
-		String msg = "Items: \n";
+		String msg = "Sua mochila: \n";
 		for (Item item : player.getItems()) {
 			msg += i + ":" + item.toString();
 			msg += "\n";
 			i += 1;
 		}
 
-		msg += "\n (V) Voltar";
+		msg += "\n(V) Voltar";
 
 		Main.msg(msg);
 	}
@@ -463,20 +449,22 @@ class Game{
 			Main.msg("Esse item nao existe");
 			return;
 		}	
-
-		if (!getBattle().getBattleStatus() && !item.getIdleUse()) {
-			Main.msg("Esse item so serve durante batalhas");
-			return;
-		}
-	
 		if (item.getName().equals("Pokeball")) {
+			if (!getPreviousMenu().equals("battle")) {
+				Main.msg("A pokebola so pode ser usada durante batalhas");
+				return;
+			}
 			PokeBall pokeball = (PokeBall) item;
 			pokeball.use(getBattle().getOpponent());
 			player.addPokemon(getBattle().getOpponent());
 			setStatus("idle");
 		} else {
 			Consumable consumable = (Consumable) item;
-			consumable.use(player.getCurrentPokemon());
+			if (!getPreviousMenu().equals("battle") && !consumable.getIdleUse()) {
+				Main.msg(consumable.getName() + " so pode ser usado durante batalhas");
+				return;
+			} else
+				consumable.use(player.getCurrentPokemon());
 		}
 		player.removeItem(index);
 	}
@@ -518,8 +506,13 @@ class Game{
 	public void playerInfo () { Main.msg(getPlayer().toString()); }
 	public Pokemon getPokemon (String pokemonName) {return this.pokemons.get(pokemonName);}
 	public String getStatus () { return this.status; }
-	public void setStatus (String status) { this.status = status; }
+	public void setStatus (String status) { 
+		setPreviousMenu(getStatus());
+		this.status = status;
+	 }
 	public Battle getBattle () { return this.battle; }
+	private void setPreviousMenu (String previousMenu) { this.previousMenu = previousMenu; }
+	public String getPreviousMenu () { return this.previousMenu; }
 }
 
 public class Main {
@@ -527,19 +520,8 @@ public class Main {
 		Save save = new Save();	
 		Game game = null;
 					
-		if(save.isNewGame()) {
-			msg("Bem vindo ao mundo de pokemon!\nEsse mundo e habitado por\n "
-					+ "criaturas chamadas Pokemon. Para algumas pessoas pokemons são pets. Para"
-					+ "outras, sao para batalhas. \nMas primeiro, conte-me qual seu nome");
-			String firstAnswer = nextLine();
-			msg("Escolha seu Pokemon. Ha quatro opcoes! Digite:\nC para Charmander\nS para Squirtle\nB para Bulbassauro\nP para Pikachu!");
-			String secondAnswer = nextLine();
-			game = new Game(firstAnswer, secondAnswer, 0);
-			msg("\n" + game.getPlayerNick() + " foi teleportado para sua cidade, é hora de começar sua jornada!");
-		} else {
-			msg("Bem-vindo de volta!");
-			game = save.getGame();
-		}
+		msg("Bem-vindo ao JPokemon!");
+		game = save.getGame();
 		// DEFINE QUAL SERA O MENU A MOSTAR BASEADO NO STATUS
 		while (true) {
 			switch (game.getStatus()) {
@@ -583,12 +565,14 @@ public class Main {
 					}
 					break;
 				case "shop":
+				//Menu shop
 					game.buyItem(firstArg);
 					break;
 				case "bag":
+				//Menu mochila
 					switch(firstArg) {
 						case "V":
-							if (game.getBattle().getBattleStatus())
+							if (game.getPreviousMenu().equals("battle"))
 								game.setStatus("battle");
 							else
 								game.setStatus("idle");
@@ -598,7 +582,7 @@ public class Main {
 								Integer.parseInt(firstArg);  
 								game.useItem(Integer.parseInt(firstArg));
 							} catch(Exception e){  
-								throw new Exception("Numeros, e nao letras, por favor");
+								Main.msg("Opcao escolhida nao existe");
 							}  
 					}
 					break;
